@@ -6,6 +6,8 @@
 
 #include "util/BOBHash32.h"
 #include "util/read_dataset.h"
+#include "sketch/burstsketch/BurstDetectorWeight.h"
+// #include "sketch/newsketch/param.h"
 
 #include<bits/stdc++.h>
 using namespace std;
@@ -249,7 +251,7 @@ FILE *open_print_header (const char *name) {
 }
 
 void test_res (double rt) {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/temp_ours.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/temp_ours.csv");
     Strawman_test::init (-1);
     Strawman_test::runtest (1);
     for (int sz = 256; sz <= 32768; sz <<= 1) {
@@ -281,7 +283,7 @@ void test_res (double rt) {
 }
 
 void test_strm () {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/temp_strawman.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/temp_strawman.csv");
     Strawman_test::init (-1);
     Strawman_test::runtest (1);
     auto ans = Strawman_test::burstid;
@@ -303,6 +305,65 @@ void test_strm () {
     }
     fclose (file);
     return;
+}
+
+map<int,pair<double,double> > Windows;
+
+const int window_length = 200000;
+const int id_tot = 4000;
+
+void test_burstsketch()
+{
+    FILE *file = open_print_header ("../netsketch_test/result/temp_burstsketch.csv");
+    Strawman_test::init (-1);
+    Strawman_test::runtest (1);
+    for (int sz = 1; sz <= 16384; sz <<= 1) {
+        double threshold = (weak_lim-300) * window_length / id_tot;
+        double screen_layer_threshold = (lim-300) * window_length / id_tot;
+        int mem = sz; // the size of memory
+        double r12 = 3.75; // the ratio of the size of Stage 1 to the size of Stage 2
+        int log_size = mem * 1024 / (12 * r12 + 20) / bucket_size; // number of buckets in Stage 2
+        int screen_layer_size = log_size * r12 * bucket_size; // number of buckets in Stage 1
+        int total_memory = screen_layer_size * (sizeof (uint32_t) + sizeof (uint64_t)) + 
+        log_size * (3 * sizeof (uint32_t) + sizeof (uint64_t)) * bucket_size;
+        int test_cycles = 10;
+        timespec time1, time2;
+        double mops = 0;
+        for (int c = 0; c < test_cycles; ++c) {
+            BurstDetector A(screen_layer_size, screen_layer_threshold, log_size, threshold);
+            Windows.clear();
+            int window = 0, cnt = 0;
+            long long resns = 0;
+            for(int i = 0; i < (int) DS.size(); i++) {
+                // if(i%1000000==0)cerr<<(i/1000000)<<" / "<< DS.size()/1000000<<endl;
+                uint64_t id = DS[i].id;
+                double temp = DS[i].delay;
+                clock_gettime (CLOCK_MONOTONIC, &time1);
+                cnt++;
+                if(cnt > window_length)
+                {
+                    cnt = 0;
+                    window++;
+                    Windows[window].first=DS[i].tm;
+                }
+                Windows[window].second=DS[i].tm;
+                A.insert(id, window, temp-300);
+                clock_gettime (CLOCK_MONOTONIC, &time2);
+                resns += (long long) (time2.tv_sec - time1.tv_sec) * 1000000000LL + (time2.tv_nsec - time1.tv_nsec);
+            }
+            double test_mops = (double) 1000.0 * DS.size () / (double) resns;
+            mops += (test_mops - mops) / (c + 1);
+            if (c == test_cycles - 1) {
+                vector<pair<int, double> > burst;
+                for (auto &bst : A.log.Record) {
+                    pair<double,double> window_range = Windows[bst.start_window];
+                    uint32_t id = bst.flow_id;
+                    burst.push_back(make_pair(id, window_range.first));
+                }
+                compare(burst, Strawman_test::burstid, file, total_memory, mops);
+            }
+        }
+    }
 }
 
 // double compare(const vector<pair<int, double> > &a, const vector<pair<int, double> > &b) {
@@ -331,8 +392,10 @@ int main() {
     cout<<"Initiation Completed\n";
     cout << DS [0].id << ' ' << DS [0].tm << ' ' << DS [0].delay << endl;
     cout << DS [DS.size () - 1].id << ' ' << DS [DS.size () - 1].tm << ' ' << DS [DS.size () - 1].delay << endl;
-    test_res (0.5);
-    test_strm ();
+    cout<< DS.size()<<endl;
+    // test_res (0.5);
+    // test_strm ();
+    test_burstsketch();
     // Sketch_test::runtest();
     // Strawman_test::runtest();
     // cout<<Sketch_test::burstid.size()<<endl;

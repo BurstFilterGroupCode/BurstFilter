@@ -1,7 +1,7 @@
 /*
  * run_strawman.cpp
  * 
- * usage: ./run_strawman p stdlim threshold flush_dt
+ * usage: ./run_strawman p stdLim threshold flush_dt
  * 分别表示比例系数，阈值，包个数（默认为1），刷新时间间隔
  * 
  * 运行strawman算法，将准确率输出到 tmp/strawman.res，内存占用输出到 tmp/strawman.res
@@ -62,7 +62,7 @@ extern vector<DS_Pack> DS;
 //             if(at < bt) get = itp;
 //         }
 //         double dt = fabs(v.t-get->t);
-//         if(dt > chklim) continue;
+//         if(dt > chkLim) continue;
 //         cntAB++;
 //         terr += dt;
 //         sumerr += abs(v.cnt - get->cnt);
@@ -71,7 +71,7 @@ extern vector<DS_Pack> DS;
 
 const double myp=0.9;
 // const double p=0.5;
-const double lim=0.005;
+const double Lim=0.005;
 const double ouv = 0.1;
 double flush_intv = 0.001;
 
@@ -109,10 +109,10 @@ double flush_intv = 0.001;
 //         val[id] = max(val[id], tm-outv);
 //         vised[id] = 1;
         
-//         if(tm - val[id] < stdlim) {
+//         if(tm - val[id] < stdLim) {
 //             cnt[id]++;
 //         }
-//         else if(lsttm[id] - lstval < stdlim) {
+//         else if(lsttm[id] - lstval < stdLim) {
 //             reportBurst(id, cnt[id], lsttm[id]);
 //             cnt[id] = 0;
 //         }
@@ -204,7 +204,7 @@ namespace Strawman_test {
                 used[DS[i].id] = 1;
                 last_time [DS [i].id] = DS [i].tm;
                 val[DS[i].id] = DS[i].tm - ouv;
-                if (DS[i].tm - val[DS[i].id] < lim) {
+                if (DS[i].tm - val[DS[i].id] < Lim) {
                     burstid.push_back(make_pair(DS[i].id, DS[i].tm));
                 }
             }
@@ -213,7 +213,7 @@ namespace Strawman_test {
                 if (last_time [DS [i].id] < DS [i].tm - ouv) {
                     last_time [DS [i].id] = DS [i].tm;
                     val[DS[i].id] = DS[i].tm - ouv;
-                    if (DS[i].tm - val[DS[i].id] < lim) {
+                    if (DS[i].tm - val[DS[i].id] < Lim) {
                        burstid.push_back(make_pair(DS[i].id, DS[i].tm));
                     }
                     continue;
@@ -221,7 +221,7 @@ namespace Strawman_test {
                 double oldval = last_time [DS[i].id] - val[DS[i].id];
                 val[DS[i].id] = val[DS[i].id] * myp + DS[i].tm * (1.0 - myp);
                 last_time [DS[i].id] = DS[i].tm;
-                if(oldval >= lim && DS [i].tm - val[DS[i].id] < lim) {
+                if(oldval >= Lim && DS [i].tm - val[DS[i].id] < Lim) {
                     burstid.push_back(make_pair(DS[i].id, DS[i].tm));
                 }
             }

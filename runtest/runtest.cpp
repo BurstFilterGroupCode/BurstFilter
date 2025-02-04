@@ -57,11 +57,38 @@ void print_list(int *t, int len, const char *name) {
     }
 }
 
+void print_listf(FILE* f,int *t, int len, const char *name) {
+    fprintf(f, "%s",name);
+    fprintf(f, " = [");
+    for(int i = 0; i < len; i++) {
+        fprintf(f, "%d", t[i]);
+        if(i == len - 1) {
+            fprintf(f, "]\n");
+        }
+        else fprintf(f, ", ");
+    }
+    fflush(f);
+}
+
+void print_listf(FILE* f,double *t, const char *pr, int len, const char *name) {
+    fprintf(f, "%s",name);
+    fprintf(f, " = [");
+    for(int i = 0; i < len; i++) {
+        fprintf(f, pr, t[i]);
+        if(i == len - 1) {
+            fprintf(f, "]\n");
+        }
+        else fprintf(f, ", ");
+    }
+    fflush(f);
+}
+
 // #define STRAWMAN
-//#define DEFINITION_PARAMS
-//#define ACCURACY_TEST
+// #define DEFINITION_PARAMS
+// #define ACCURACY_TEST
 // #define COMPARE_TEST
-#define CACHE_TEST
+// #define CACHE_TEST
+#define PARAMS_TEST
 
 int main() {
 
@@ -269,6 +296,136 @@ int main() {
         // print_list((double*)res_sketch, "%.5f", 13, "sketch_hitrt");
         // print_list((double*)res_lru, "%.5f", 13, "lru_hitrt");
         // print_list((double*)res_lfu, "%.5f", 13, "lfu_hitrt");
+    }
+#endif
+
+#ifdef PARAMS_TEST
+    if(false)
+    {
+        run_and_wait("./run_correct 0.1 0.005 1");
+        const double memk[10] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
+        const int mem[20] = {1, 2, 5, 7, 10, 20, 30, 50, 70, 100, 200, 500, 1000};
+        double f1sc[100];
+        double throughput[100];
+        FILE* f = fopen("tmp/param_test_memk.res", "w");
+        for(int i = 0; i < 9; i++) {
+            fprintf(f, "memk = %.1f\n", memk[i]);
+            fflush(f);
+            char cmdline[1000];
+            for(int j = 0; j < 13; j++)
+            {
+                sprintf(cmdline , "./run_newsketch %d %.1f 0.1 0.005 0.01 1", mem[j], memk[i]);
+                run_and_wait(cmdline);
+                f1sc[j] = get_res("./tmp/newsketch.res");
+                throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
+                throughput[j] = 1.0 / throughput[j] / 1000;
+            }
+            print_listf(f, (int*)mem, 13, "mem");
+            print_listf(f, (double*)f1sc, "%.5f", 13, "f1_score");
+            print_listf(f, (double*)throughput, "%.8f", 13, "throughput");
+        }
+    }
+    if(false)
+    {
+        const double param[10] = {0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18};
+        const int mem[20] = {1, 2, 5, 7, 10, 20, 30, 50, 70, 100, 200, 500, 1000};
+        double f1sc[100];
+        double throughput[100];
+        FILE* f = fopen("tmp/param_test_alpha.res", "w");
+        for(int i = 0; i < 9; i++) {
+            char cmdline[1000];
+            sprintf(cmdline, "./run_correct %.3f 0.005 1", param[i]);
+            run_and_wait(cmdline);
+            fprintf(f, "alpha = %.3f\n", param[i]);
+            fflush(f);
+            for(int j = 0; j < 13; j++)
+            {
+                sprintf(cmdline , "./run_newsketch %d 0.4 %.3f 0.005 0.01 1", mem[j], param[i]);
+                run_and_wait(cmdline);
+                f1sc[j] = get_res("./tmp/newsketch.res");
+                throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
+                throughput[j] = 1.0 / throughput[j] / 1000;
+            }
+            print_listf(f, (int*)mem, 13, "mem");
+            print_listf(f, (double*)f1sc, "%.5f", 13, "f1_score");
+            print_listf(f, (double*)throughput, "%.8f", 13, "throughput");
+        }
+    }
+    if(false)
+    {
+        run_and_wait("./run_correct 0.1 0.005 1");
+        const double param[10] = {1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8};
+        const int mem[20] = {1, 2, 5, 7, 10, 20, 30, 50, 70, 100, 200, 500, 1000};
+        double f1sc[100];
+        double throughput[100];
+        FILE* f = fopen("tmp/param_test_weaklim.res", "w");
+        for(int i = 0; i < 9; i++) {
+            fprintf(f, "weaklim / lim = %.4f\n", param[i]);
+            fflush(f);
+            char cmdline[1000];
+            for(int j = 0; j < 13; j++)
+            {
+                sprintf(cmdline , "./run_newsketch %d 0.4 0.1 0.005 %.4f 1", mem[j], 0.005 * param[i]);
+                run_and_wait(cmdline);
+                f1sc[j] = get_res("./tmp/newsketch.res");
+                throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
+                throughput[j] = 1.0 / throughput[j] / 1000;
+            }
+            print_listf(f, (int*)mem, 13, "mem");
+            print_listf(f, (double*)f1sc, "%.5f", 13, "f1_score");
+            print_listf(f, (double*)throughput, "%.8f", 13, "throughput");
+        }
+    }
+    if(false)
+    {
+        const double param[10] = {0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01};
+        const int mem[20] = {1, 2, 5, 7, 10, 20, 30, 50, 70, 100, 200, 500, 1000};
+        double f1sc[100];
+        double throughput[100];
+        FILE* f = fopen("tmp/param_test_lim.res", "w");
+        for(int i = 0; i < 9; i++) {
+            char cmdline[1000];
+            sprintf(cmdline, "./run_correct 0.1 %.4f 1", param[i]);
+            run_and_wait(cmdline);
+            fprintf(f, "lim = %.4f\n", param[i]);
+            fflush(f);
+            for(int j = 0; j < 13; j++)
+            {
+                sprintf(cmdline , "./run_newsketch %d 0.4 0.1 %.4f %.4f 1", mem[j], param[i], param[i]* 2);
+                run_and_wait(cmdline);
+                f1sc[j] = get_res("./tmp/newsketch.res");
+                throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
+                throughput[j] = 1.0 / throughput[j] / 1000;
+            }
+            print_listf(f, (int*)mem, 13, "mem");
+            print_listf(f, (double*)f1sc, "%.5f", 13, "f1_score");
+            print_listf(f, (double*)throughput, "%.8f", 13, "throughput");
+        }
+    }
+    if(true)
+    {
+        run_and_wait("./run_correct 0.1 0.005 1");
+        const int param[10] = {1, 2, 3, 4, 5, 6, 7};
+        const int mem[20] = {1, 2, 5, 7, 10, 20, 30, 50, 70, 100, 200, 500, 1000};
+        double f1sc[100];
+        double throughput[100];
+        FILE* f = fopen("tmp/param_test_hash2.res", "w");
+        for(int i = 0; i < 7; i++) {
+            fprintf(f, "hash2 = %d\n", param[i]);
+            fflush(f);
+            char cmdline[1000];
+            for(int j = 0; j < 13; j++)
+            {
+                sprintf(cmdline , "./run_newsketch %d 0.4 0.1 0.005 0.01 %d", mem[j], param[i]);
+                run_and_wait(cmdline);
+                f1sc[j] = get_res("./tmp/newsketch.res");
+                throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
+                throughput[j] = 1.0 / throughput[j] / 1000;
+            }
+            print_listf(f, (int*)mem, 13, "mem");
+            print_listf(f, (double*)f1sc, "%.5f", 13, "f1_score");
+            print_listf(f, (double*)throughput, "%.8f", 13, "throughput");
+        }
     }
 #endif
 }

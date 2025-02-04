@@ -7,9 +7,8 @@
 class ScreenLayer
 {
 	public:
-	int size;
-	double m;
-	uint32_t* counter;
+	int size, m;
+	double* counter;
 	uint64_t* id;
 	BOBHash32* bobhash[hash_num];
 	ScreenLayer(){};
@@ -17,7 +16,7 @@ class ScreenLayer
 	{
 		size = _size;
 		m = _m;
-		counter = new uint32_t[size];
+		counter = new double[size];
 		id = new uint64_t[size];
 		for(int i = 0; i < size; i++)
 		{
@@ -35,7 +34,7 @@ class ScreenLayer
 			id[i] = 0;
 		}
 	}
-	uint32_t lookup(int c)
+	double lookup(int c)
 	{
 		return counter[c];
 	}
@@ -58,7 +57,7 @@ class ScreenLayer
 		id[c] = 0;
 		*/
 	}
-	int insert(uint64_t flow_id)
+	int insert(uint64_t flow_id, double weight)
 	{
 		int ret = -1;
 		// the basic version
@@ -67,20 +66,24 @@ class ScreenLayer
 			int z = bobhash[i]->run((char *)&flow_id, 8) % size;
 			if(id[z] == flow_id)
 			{
-				counter[z]++;
-				if((int)counter[z] >= m)
+				counter[z] += weight;
+				if(counter[z] >= m)
 					ret = z;
 			}
 			else if(id[z] == 0)
 			{
-				counter[z]++;
+				counter[z] += weight;
 				id[z] = flow_id;
 			}
 			else
 			{
-				counter[z]--;
-				if(counter[z] == 0)
-					id[z] = 0;
+				counter[z] -= weight;
+				if(counter[z] <= 0)
+				{
+					counter[z] *= -1;
+					if(counter[z] == 0)id[z] = 0;
+					else id[z] = flow_id;
+				}
 			}
 		}
 		  /*
@@ -140,7 +143,7 @@ class Log // Stage 2
 	bool flag;
 	int size;
 	double m, screen_layer_threshold;
-	uint32_t** counter[2];
+	double** counter[2];
 	uint64_t** id;
 	uint32_t** timestamp;
 	vector<Burst> Record;
@@ -152,14 +155,14 @@ class Log // Stage 2
 		m = _m;
 		screen_layer_threshold = _screen_layer_threshold;
 		Record.clear();
-		counter[0] = (uint32_t **)new uint32_t*[size];
-		counter[1] = (uint32_t **)new uint32_t*[size];
+		counter[0] = (double **)new double*[size];
+		counter[1] = (double **)new double*[size];
 		id = (uint64_t **)new uint64_t*[size];
 		timestamp = (uint32_t **)new uint32_t*[size];
 		for(int i = 0; i < size; i++)
 		{
-			counter[0][i] = new uint32_t[bucket_size];
-			counter[1][i] = new uint32_t[bucket_size];
+			counter[0][i] = new double[bucket_size];
+			counter[1][i] = new double[bucket_size];
 			id[i] = new uint64_t[bucket_size];
 			timestamp[i] = new uint32_t[bucket_size];
 		}
@@ -187,7 +190,7 @@ class Log // Stage 2
 					id[i][j] = 0;
 					timestamp[i][j] = -1;
 				}
-				if(id[i][j] != 0 && counter[0][i][j] < (unsigned)screen_layer_threshold && counter[1][i][j] < (unsigned)screen_layer_threshold)
+				if(id[i][j] != 0 && counter[0][i][j] < screen_layer_threshold && counter[1][i][j] < screen_layer_threshold)
 				{
 					counter[0][i][j] = 0;
 					counter[1][i][j] = 0;
@@ -207,9 +210,9 @@ class Log // Stage 2
 					Record.push_back(Burst(timestamp[i][j], time, id[i][j]));
 					timestamp[i][j] = -1;
 				}
-				else if(counter[flag][i][j] < (unsigned)m)
+				else if(counter[flag][i][j] < m)
 					timestamp[i][j] = -1;
-				else if(counter[flag][i][j] >= lambda * counter[flag ^ 1][i][j] && counter[flag][i][j] >= (unsigned)m)
+				else if(counter[flag][i][j] >= lambda * counter[flag ^ 1][i][j] && counter[flag][i][j] >= m)
 					timestamp[i][j] = time;
 				
 			}
@@ -218,20 +221,21 @@ class Log // Stage 2
 			for(int j = 0; j < bucket_size; j++)
 				counter[flag][i][j] = 0;
 	}
-	bool lookup(uint64_t flow_id, uint32_t flow_time)
+	bool lookup(uint64_t flow_id, uint32_t flow_time, double weight)
 	{	
 		int z = bobhash->run((char *)&flow_id, 8) % size;
 		for(int j = 0; j < bucket_size; j++)
 			if(id[z][j] == flow_id)
 			{
-				counter[flag][z][j]++;
+				counter[flag][z][j] += weight;
 				return true;
 			}
 		return false;
 	}
-	bool insert(uint64_t flow_id, uint32_t flow_time, uint32_t flow_count)
+	bool insert(uint64_t flow_id, uint32_t flow_time, double flow_count)
 	{
-		uint32_t mi = oo, l = 0, f = 0;
+		double mi = oo;
+		uint32_t l = 0, f = 0;
 		int z = bobhash->run((char *)&flow_id, 8) % size;
 		for(int j = 0; j < bucket_size; j++)
 		{
@@ -296,7 +300,7 @@ class BurstDetector // BurstSketch
 		screen_layer = ScreenLayer(ScreenLayerSize, ScreenLayerThreshold);
 		log = Log(LogSize, LogThreshold, ScreenLayerThreshold);
 	}
-	void insert(uint64_t id, uint32_t timestamp)
+	void insert(uint64_t id, uint32_t timestamp, double weight)
 	{
 		if(last_timestamp < timestamp)
 		{
@@ -307,15 +311,14 @@ class BurstDetector // BurstSketch
 			}
 			last_timestamp = timestamp;
 		}
-		if(log.lookup(id, timestamp)) {
+		if(log.lookup(id, timestamp, weight)) {
 			cache_hit++;
 			return ;
 		}
-		int ret = screen_layer.insert(id);
+		int ret = screen_layer.insert(id, weight);
 		if(ret == -1)
 			return ;
-		// cerr<<"ret="<<ret<<endl;
-		uint32_t count = screen_layer.lookup(ret);
+		double count = screen_layer.lookup(ret);
 		if(log.insert(id, timestamp, count))
 			screen_layer.clear(ret);
 	}

@@ -6,6 +6,7 @@
 
 #include "util/BOBHash32.h"
 #include "util/read_dataset.h"
+#include "sketch/burstsketch/BurstDetector.h"
 
 #include <bits/stdc++.h>
 using namespace std;
@@ -262,7 +263,7 @@ FILE *open_print_header (const char *name) {
 }
 
 void test_res (double rt, int S1, int S2) {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/jitter_ours.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/jitter_ours.csv");
     for (int sz = 256; sz <= 32768; sz <<= 1) {
         int test_cycles = 10;
         timespec time1, time2;
@@ -294,7 +295,7 @@ void test_res (double rt, int S1, int S2) {
 }
 
 void test_strm () {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/jitter_strawman.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/jitter_strawman.csv");
     for (int sz = 312; sz <= 10000; sz <<= 1) {
         int test_cycles = 10;
         timespec time1, time2;
@@ -330,11 +331,77 @@ void test_strm () {
     return;
 }
 
+map<int,pair<double,double> > Windows;
+
+const double tlen = 1;
+
+const double threshold = tlen / lim / 5;
+
+void test_Burstsketch()
+{
+    FILE *file = open_print_header ("../netsketch_test/result/jitter_burstsketch.csv");
+    for (int sz = 1; sz <= 16384; sz <<= 1) {
+        int mem = sz; // the size of memory
+		double l = 5; // the ratio of the Running Track threshold to the burst threshold
+		double r12 = 3.75; // the ratio of the size of Stage 1 to the size of Stage 2
+		double screen_layer_threshold = l * threshold; // Running Track threshold
+		int log_size = mem * 1024 / (12 * r12 + 20) / bucket_size; // number of buckets in Stage 2
+		int screen_layer_size = log_size * r12 * bucket_size; // number of buckets in Stage 1
+		int total_memory = screen_layer_size * (sizeof (uint32_t) + sizeof (uint64_t)) + 
+		log_size * (3 * sizeof (uint32_t) + sizeof (uint64_t)) * bucket_size;
+        int test_cycles = 10;
+        timespec time1, time2;
+        double mops = 0;
+        for (int c = 0; c < test_cycles; ++c) {
+			BurstDetector A(screen_layer_size, int(screen_layer_threshold), log_size, int(threshold));
+			Windows.clear ();
+            lstt.clear();
+            int window = 0, cnt = 0;
+            double lst_t = 0;
+            long long resns = 0;
+            // cerr<<"size="<<DS.size()<<endl;
+            for (int i = 0; i < (int) DS.size(); i++) {
+                uint64_t id = DS[i].id;
+                double tt = DS[i].tm;
+                // if(i%10000==0)cerr<<tt<<endl;
+                clock_gettime (CLOCK_MONOTONIC, &time1); 
+                if(cnt == 0 || tt - lst_t >= tlen)
+                {
+                    window++;
+                    Windows[window].first = tt;
+                    lst_t = tt;
+                }
+                cnt++;
+                // if(i%10000==0)cerr<<window<<endl;
+                Windows[window].second=tt;
+                A.insert(id, window);   
+                clock_gettime (CLOCK_MONOTONIC, &time2);
+                resns += (long long) (time2.tv_sec - time1.tv_sec) * 1000000000LL + (time2.tv_nsec - time1.tv_nsec); 
+            }
+            double test_mops = (double) 1000.0 * DS.size () / (double) resns;
+            mops += (test_mops - mops) / (c + 1);
+            if (c == test_cycles - 1) {
+                vector<jitter> J;
+                for(int i = 0; i < (int) A.log.Record.size(); i++) {
+                    struct Burst bst = A.log.Record[i];
+                    pair<double,double> window_range = Windows[bst.start_window];
+                    uint32_t id = bst.flow_id;
+                    J.push_back((jitter){id,window_range.first});
+                }
+                compare (J, file, total_memory, mops);
+            }
+        }
+    }
+    fclose (file);
+    return;
+}
+
 int main() {
     init_dataset(10000000);
     cout<<"Finished dataset reading\n";
     // test_res (0.5, 4, 4);
-    test_strm ();
+    // test_strm ();
+    test_Burstsketch();
     return 0;
     /*
     // run jitter

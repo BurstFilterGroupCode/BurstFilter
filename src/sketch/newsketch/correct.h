@@ -33,14 +33,14 @@ struct CorrectSketch {
         val[id] = val[id] * (1.0 - p) + tm * p;
         val[id] = max(val[id], tm-outv);
         
-        if (tm - lsttm [id] < outv && tm - lstval >= stdlim && tm - val [id] < stdlim) {
+        if (tm - lsttm [id] < outv && tm - lstval >= lim && tm - val [id] < lim) {
             reportBurst (id, 1, tm);
         }
 
-        // if(tm - val[id] < stdlim) {
+        // if(tm - val[id] < lim) {
         //     cnt[id]++;
         // }
-        // else if(lsttm[id] - lstval < stdlim) {
+        // else if(lsttm[id] - lstval < lim) {
         //     reportBurst(id, cnt[id], lsttm[id]);
         //     cnt[id] = 0;
         // }

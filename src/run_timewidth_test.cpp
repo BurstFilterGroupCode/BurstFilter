@@ -6,6 +6,7 @@
 
 #include "util/BOBHash32.h"
 #include "util/read_dataset.h"
+#include "sketch/burstsketch/BurstDetectorLatency.h"
 
 #include<bits/stdc++.h>
 using namespace std;
@@ -208,12 +209,19 @@ namespace Strawman_test {
 };
 
 double compare(vector<pair<int, double> > &ours, vector<pair<int, double> > &ans, FILE *file = NULL, int memory = 0, double mops = 0) {
+    FILE *fres = fopen("../netsketch_test/result/latency_ours.txt","w");
+    for(auto &v:ours) {
+        fprintf(fres,"%d %.10f\n",v.first,v.second);
+    }
+    fclose(fres);
+    cerr<<ours.size()<<endl;
     map<int, double> Mp;
     set <int> app;
     for (auto &jit : ours) {
         if (Mp.find (jit.first) == Mp.end ())
             Mp [jit.first] = jit.second;
     }
+    cerr<<Mp.size()<<endl;
     double allt = DS[DS.size() - 1].tm;
     //printf("%.10f\n", allt);
     double sumerr = 0;
@@ -249,7 +257,7 @@ FILE *open_print_header (const char *name) {
 }
 
 void test_res (double rt) {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/latency_ours.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/latency_ours.csv");
     Strawman_test::init (-1);
     Strawman_test::runtest (1);
     // for (int sz = 100000000; sz <= 100000000; sz <<= 1) {
@@ -282,7 +290,7 @@ void test_res (double rt) {
 }
 
 void test_strm () {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/latency_strawman.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/latency_strawman.csv");
     Strawman_test::init (-1);
     Strawman_test::runtest (1);
     auto ans = Strawman_test::burstid;
@@ -306,13 +314,99 @@ void test_strm () {
     return;
 }
 
+map<int,pair<double,double> > Windows;
+
+const double tlen = 1;
+
+const int window_length = 1;
+
+void test_burstsketch()
+{
+    FILE *file = open_print_header ("../netsketch_test/result/latency_burstsketch.csv");
+    Strawman_test::init (-1);
+    Strawman_test::runtest (1);
+    for (int sz = 1; sz <= 131072; sz <<= 1) {
+        double threshold = lim;
+        double l = 1; // the ratio of the Running Track threshold to the burst threshold
+		double r12 = 3.75; // the ratio of the size of Stage 1 to the size of Stage 2
+		double screen_layer_threshold = l * threshold; // Running Track threshold
+        int mem = sz * 1024; // the size of memory
+        int log_size = mem / (12 * r12 + 20) / bucket_size; // number of buckets in Stage 2
+        log_size = max(1,log_size);
+        int screen_layer_size = log_size * r12 * bucket_size; // number of buckets in Stage 1
+        int total_memory = screen_layer_size * (sizeof (uint32_t) + sizeof (uint64_t)) + 
+        log_size * (3 * sizeof (uint32_t) + sizeof (uint64_t)) * bucket_size;
+        int test_cycles = 10;
+        timespec time1, time2;
+        double lst_t = 0;
+        double mops = 0;
+        for (int c = 0; c < test_cycles; ++c) {
+            BurstDetector A(screen_layer_size, 0, log_size, threshold);
+            Windows.clear();
+            int window = 0, cnt = 0;
+            long long resns = 0;
+            for(int i = 0; i < (int) DS.size(); i++) {
+                // if(i%1000000==0)cerr<<(i/1000000)<<" / "<< DS.size()/1000000<<endl;
+                uint64_t id = DS[i].id;
+                double temp = DS[i].delay;
+                double tt = DS[i].tm;
+                clock_gettime (CLOCK_MONOTONIC, &time1);
+                if(cnt == 0 || tt - lst_t >= tlen)
+                {
+                    window++;
+                    Windows[window].first = tt;
+                    lst_t = tt;
+                }
+                cnt++;
+                /*
+                if(cnt > window_length)
+                {
+                    cnt = 0;
+                    window++;
+                    Windows[window].first=DS[i].tm;
+                }*/
+                Windows[window].second=DS[i].tm;
+                A.insert(id, window, temp, 0, DS[i].tm);
+                clock_gettime (CLOCK_MONOTONIC, &time2);
+                resns += (long long) (time2.tv_sec - time1.tv_sec) * 1000000000LL + (time2.tv_nsec - time1.tv_nsec);
+            }
+            double test_mops = (double) 1000.0 * DS.size () / (double) resns;
+            mops += (test_mops - mops) / (c + 1);
+            if (c == test_cycles - 1) {
+                vector<pair<int, double> > burst;
+                for (auto &bst : A.log.Record) {
+                    pair<double,double> window_range = Windows[bst.start_window];
+                    uint32_t id = bst.flow_id;
+                    burst.push_back(make_pair(id, window_range.first));
+                }
+                compare(burst, Strawman_test::burstid, file, total_memory, mops);
+            }
+        }
+    }
+}
+
+void test_wtf()
+{
+    int total_memory = 1;
+    vector<pair<int, double> > burst;
+    Strawman_test::init (-1);
+    Strawman_test::runtest (1);
+    for(auto i:DS)
+    {
+        if(i.delay >= lim)burst.push_back(make_pair(i.id,i.tm));
+    }
+    compare(burst, Strawman_test::burstid, NULL, total_memory, 0);
+}
+
 int main() {
     init_dataset(10000000);
     cout<<"Initiation Completed\n";
     cout << DS [0].id << ' ' << DS [0].tm << ' ' << DS [0].delay << endl;
     cout << DS [DS.size () - 1].id << ' ' << DS [DS.size () - 1].tm << ' ' << DS [DS.size () - 1].delay << endl;
     // test_res (0.5);
-    test_strm ();
+    // test_strm ();
+    test_wtf();
+    // test_burstsketch();
     // Sketch_test::runtest();
     // Strawman_test::runtest();
     // cout<<Sketch_test::burstid.size()<<endl;

@@ -68,7 +68,7 @@ void init_dataset(int n){
 
 #ifdef CAIDA
 
-    ifstream fin("../../CAIDA_2018/00.dat");
+    ifstream fin("../dataset/CAIDA_2018/00.dat");
     while(n--) {
         struct Trace trace;
         fin.read((char *)&trace, 23);
@@ -88,7 +88,7 @@ void init_dataset(int n){
 
 #ifdef SX_STKOVFL
 
-    ifstream fin("../../sx-stackoverflow.txt");
+    ifstream fin("../dataset/sx-stackoverflow.txt");
     while(n--) {
         int st, ed;
         long long tm;
@@ -108,9 +108,10 @@ void init_dataset(int n){
 #endif
 
 #ifdef Yahoo_G4
-    ifstream fin("/root/burst/Yahoo/ft-v05.2008-04-29.080000-0700.permuted");
+    ifstream fin("../dataset/Yahoo/ft-v05.2008-04-29.080000-0700.permuted");
     string sss;
     getline(fin, sss);
+    double lim = 10.0;
     while(n--) {
         string Start, End, Sif, SrcIPaddress, SrcP, DIf, DstIPaddress, DstP, P, Fl, Pkts, Octets;
         fin>>Start>>End>>Sif>>SrcIPaddress>>SrcP>>DIf>>DstIPaddress>>DstP>>P>>Fl>>Pkts>>Octets;
@@ -133,6 +134,20 @@ void init_dataset(int n){
     for(int i = 0; i < (int)DS.size(); i++) DS[i].tm -= t;
     double density = (DS[DS.size()-1].tm - DS[0].tm) / DS.size();
     for(int i = 0; i < (int)DS.size(); i++) DS[i].tm *= caida_density / density;
+    map<int,int> sum, cnt, f;
+    for(auto &pk:DS) {
+        sum[pk.id] += pk.delay;
+        cnt[pk.id]++;
+    }
+    for(auto &pk:cnt)
+    {
+        double avg = (double)sum[pk.first] / pk.second;
+        double new_avg = (double)rand() / RAND_MAX *  0.1 * lim + 0.95 * lim;
+        f[pk.first] = new_avg / avg;
+    }
+    for(auto &pk:DS) {
+        pk.delay *= f[pk.id];
+    }
 #endif
 
 #ifdef Yahoo_G6
@@ -210,7 +225,7 @@ void init_dataset(int n){
 #ifdef WATER_TEMP_MIXED
     vector<double> val;
     string s;
-    ifstream fin("../../water_temp.json");
+    ifstream fin("../dataset/water_temp.json");
     getline(fin, s);
     string tmp = "";
     int isinbrack = 0;
@@ -274,10 +289,10 @@ void init_dataset(int n){
 
 
 #ifdef JITTER_MIXED_DATA
-    ifstream fin("../../jitter_dataset/wechat_uniform_1.dat");    
+    ifstream fin("../dataset/jitter_dataset/wechat_uniform_1.dat");    
     // ifstream fin("../../jitter_dataset/wechat_1.dat");    
     // ifstream fin("../../jitter_dataset/caida_wechat.dat");    
-    ifstream fcor("../../jitter_dataset/ground_truth_uniform_1.txt");
+    ifstream fcor("../dataset/jitter_dataset/ground_truth_uniform_1.txt");
     // ifstream fcor("../../jitter_dataset/ground_truth_1.txt");
     // ifstream fcor("../../jitter_dataset/ground_truth.txt");
     set<int> flid;

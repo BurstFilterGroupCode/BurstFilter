@@ -4,8 +4,8 @@
     tests the result of the newsketch
     requires: ./tmp/correct.txt - the correct burst
 
-    usage: ./run_newsketch memsz(kb) mem_part1/memsz p(ratio) stdlim(burstlim) threshold
-    example: ./run_newsketch 10 0.8 0.1 0.05 50 
+    usage: ./run_newsketch memsz(kb) mem_part1/memsz p(ratio) stdlim(burstlim) weaklim threshold hash2
+    example: ./run_newsketch 10 0.8 0.1 0.1 0.05 50 1 
 
 */
 
@@ -15,19 +15,20 @@
 #include "sketch/newsketch/param.h"
 #include "util/BOBHash32.h"
 #include <bits/stdc++.h>
+#include "util/time.h"
 using namespace std;
 
-// unordered_map<string, int> sz;
-// unordered_map<string, double> tbeg;
-// unordered_map<string, double> tend;
+unordered_map<string, int> sz;
+unordered_map<string, double> tbeg;
+unordered_map<string, double> tend;
 
-// int cntA,cntB,cntAB;
+int cntA,cntB,cntAB;
 
-// set<id_type> sa,sb;
-// map<id_type, int> ma,mb;
-// int sumerr;
-// double terr;
-// map<id_type, double> ta,tb;
+set<id_type> sa,sb;
+map<id_type, int> ma,mb;
+int sumerr;
+double terr;
+map<id_type, double> ta,tb;
 
 // void Compare0(const vector<Burstelem> &A, const vector<Burstelem> &B) {
 //     for(auto pii : A) {
@@ -55,52 +56,53 @@ using namespace std;
 // }
 
 
-// bool cmp(const Burstelem &A, const Burstelem &B) {
-//     return A.t<B.t;
-// }
+bool cmp(const Burstelem &A, const Burstelem &B) {
+    return A.t<B.t;
+}
 
-// void Compare(vector<Burstelem> &A, vector<Burstelem> &B) {
-//     if(A.size() < B.size()) swap(A, B);
-//     sa.clear();sb.clear();
-//     ma.clear();
-//     mb.clear();
-//     ta.clear();
-//     tb.clear();
-//     cntA = cntB = cntAB = 0;
-//     sumerr = terr = 0;
-//     cntA=A.size();
-//     cntB=B.size();
-//     map<id_type, vector<Burstelem> > mp;
-//     sort(A.begin(),A.end(),cmp);
-//     for(auto v : A) {
-//         mp[v.id].push_back(v);
-//     }
-//     for(auto v : B) {
-//         vector<Burstelem> &B = mp[v.id];
-//         if(B.size() == 0) continue;
-//         auto it = lower_bound(B.begin(), B.end(), v, cmp);
-//         auto get = it;
-//         if(it == B.end()) {
-//             get = --it;
-//         }
-//         else if(it != B.begin()) {
-//             auto itp = it;
-//             itp--;
-//             double at = v.t - itp->t;
-//             double bt = it->t - v.t;
-//             if(at < bt) get = itp;
-//         }
-//         double dt = fabs(v.t-get->t);
-//         if(dt > chklim) continue;
-//         cntAB++;
-//         terr += dt;
-//         sumerr += abs(v.cnt - get->cnt);
-//     }
-// }
+void Compare(vector<Burstelem> &A, vector<Burstelem> &B) {
+    if(A.size() < B.size()) swap(A, B);
+    sa.clear();sb.clear();
+    ma.clear();
+    mb.clear();
+    ta.clear();
+    tb.clear();
+    cntA = cntB = cntAB = 0;
+    sumerr = terr = 0;
+    cntA=A.size();
+    cntB=B.size();
+    map<id_type, vector<Burstelem> > mp;
+    sort(A.begin(),A.end(),cmp);
+    for(auto v : A) {
+        mp[v.id].push_back(v);
+    }
+    for(auto v : B) {
+        vector<Burstelem> &B = mp[v.id];
+        if(B.size() == 0) continue;
+        auto it = lower_bound(B.begin(), B.end(), v, cmp);
+        auto get = it;
+        if(it == B.end()) {
+            get = --it;
+        }
+        else if(it != B.begin()) {
+            auto itp = it;
+            itp--;
+            double at = v.t - itp->t;
+            double bt = it->t - v.t;
+            if(at < bt) get = itp;
+        }
+        double dt = fabs(v.t-get->t);
+        if(dt > chklim) continue;
+        cntAB++;
+        terr += dt;
+        sumerr += abs(v.cnt - get->cnt);
+    }
+}
 
 /*
 struct Param {
-    double _stdlim;
+    double _lim;
+    double _weaklim;
     double _p;
     double _outv;
     int _threshold;
@@ -151,6 +153,9 @@ double compare(vector<Burstelem> &ours, vector<Burstelem> &ans, FILE *file = NUL
     printf ("TP: %d, FP: %d, FN: %d\n", TP, FP, FN);
     printf ("Recall: %.6lf%%, Precision: %.6lf%%, F1 Score: %.6lf%%\n", R * 100, P * 100, F1 * 100);
     if (file != NULL) {
+        printf("ready to write results to file\n");
+        printf("ready write %d,%d,%d,%d,%d,%.6lf,%.6lf,%.6lf,%.6lf,%.6lf\n",
+            memory, (int) Mp.size (), TP, FP, FN, F1 * 100, P * 100, R * 100, sumerr / (TP + FN + FP), mops);
         fprintf (file, "%d,%d,%d,%d,%d,%.6lf,%.6lf,%.6lf,%.6lf,%.6lf\n",
             memory, (int) Mp.size (), TP, FP, FN, F1 * 100, P * 100, R * 100, sumerr / (TP + FN + FP), mops);
     }
@@ -165,7 +170,7 @@ FILE *open_print_header (const char *name) {
 }
 
 void test_res (double rt) {
-    FILE *file = open_print_header ("/root/burst/netsketch_test/result/main_ours.csv");
+    FILE *file = open_print_header ("../netsketch_test/result/main_ours.csv");
     for (int sz = 1024; sz <= 131072; sz <<= 1) {
         int test_cycles = 10;
         timespec time1, time2;
@@ -193,7 +198,7 @@ void test_res (double rt) {
 }
 
 int main(int argc, char **argv) {
-    struct Param P = Param{0.005, 0.1, 0.5, 1, 0.5, 8*1024, 8*1024};
+    struct Param P = Param{0.005, 0.01, 0.1, 0.5, 1, 0.5, 8*1024, 8*1024, 1};
     // struct Param P = Param{0.005, 0.1, 0.5, 50, 0.5, 8*1024, 8*1024};
     if(argc == 2) {
         int SZ;
@@ -214,58 +219,63 @@ int main(int argc, char **argv) {
         sscanf(argv[3], "%lf", &P._p);
     }
     //printf("%lf\n", P._p);
-    if(argc > 4) {
-        sscanf(argv[4], "%lf", &P._stdlim);
-    }
-    //printf("%lf\n", P._stdlim);
     if(argc > 5) {
-        sscanf(argv[5], "%d", &P._threshold);
+        sscanf(argv[4], "%lf", &P._lim);
+        sscanf(argv[5], "%lf", &P._weaklim);
+    }
+    //printf("%lf\n", P._lim);
+    //printf("%lf\n", P._weaklim);
+    if(argc > 6) {
+        sscanf(argv[6], "%d", &P._threshold);
+    }
+    if(argc > 7) {
+        sscanf(argv[7], "%d", &P._hash2);
     }
     //printf("%d\n", P._threshold);
     load_param(P);
     const int N = 10000000;
     init_dataset(N);
     read_correct();
-    test_res (0.8);
-    // long long sttime = time_ms();
-    // NewSketch T(P.Size_stage1, P.Size_stage2);
-    // for(int i=0;i<N;i++) {
-    //     T.main_insert(DS[i].id, DS[i].tm, 0.0);
-    // }
-    // FILE *cachelog = fopen("tmp/newsketch_cache.log", "w");
-    // for(int i = 0; i < (int)T.Log.size(); i++) {
-    //     switch(T.Log[i].tp) {
-    //         case INSERT:
-    //             fprintf(cachelog, "insert ");
-    //             break;
-    //         case EVICT:
-    //             fprintf(cachelog, "evict ");
-    //             break;
-    //         case VISIT:
-    //             fprintf(cachelog, "visit ");
-    //             break;
-    //     }
-    //     fprintf(cachelog, "%d\n", T.Log[i].id);
-    // }
-    // fclose(cachelog);
-    // long long edtime = time_ms();
-    // cout<<T.Burst.size()<<' '<<Tc.size()<<endl;
-    // //puts("end of reading");
-    // Compare(T.Burst, Tc);
+    // test_res (0.8);
+    long long sttime = time_ms();
+    NewSketch T(P.Size_stage1, P.Size_stage2);
+    for(int i=0;i<N;i++) {
+        T.main_insert(DS[i].id, DS[i].tm, 0.0);
+    }
+    FILE *cachelog = fopen("tmp/newsketch_cache.log", "w");
+    for(int i = 0; i < (int)T.Log.size(); i++) {
+        switch(T.Log[i].tp) {
+            case INSERT:
+                fprintf(cachelog, "insert ");
+                break;
+            case EVICT:
+                fprintf(cachelog, "evict ");
+                break;
+            case VISIT:
+                fprintf(cachelog, "visit ");
+                break;
+        }
+        fprintf(cachelog, "%d\n", T.Log[i].id);
+    }
+    fclose(cachelog);
+    long long edtime = time_ms();
+    cout<<T.Burst.size()<<' '<<Tc.size()<<endl;
+    //puts("end of reading");
+    Compare(T.Burst, Tc);
 
-    // //cout<<cntA<<' '<<cntB<<' '<<cntAB<<endl;
+    //cout<<cntA<<' '<<cntB<<' '<<cntAB<<endl;
 
-    // double preci = 1.0 * cntAB / cntA;
-    // double recal = 1.0 * cntAB / cntB;
-    // double f1 = 2 * preci * recal / (preci + recal);
-    // printf("%.10f %.10f\n", preci, recal);
+    double preci = 1.0 * cntAB / cntA;
+    double recal = 1.0 * cntAB / cntB;
+    double f1 = 2 * preci * recal / (preci + recal);
+    printf("%.10f %.10f\n", preci, recal);
 
-    // FILE *f1res = fopen("tmp/newsketch.res", "w");
-    // fprintf(f1res, "%.10f\n", f1);
-    // fclose(f1res);
+    FILE *f1res = fopen("tmp/newsketch.res", "w");
+    fprintf(f1res, "%.10f\n", f1);
+    fclose(f1res);
 
 
-    // FILE* fthroughput = fopen("tmp/newsketch_throughput.res", "w");
-    // fprintf(fthroughput, "%lld\n", edtime - sttime);
-    // fclose(fthroughput);
+    FILE* fthroughput = fopen("tmp/newsketch_throughput.res", "w");
+    fprintf(fthroughput, "%lld\n", edtime - sttime);
+    fclose(fthroughput);
 }

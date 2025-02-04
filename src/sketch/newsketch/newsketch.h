@@ -23,11 +23,11 @@ struct Mydouble {
     double todouble() {return val / 1000000.0;}
 };
 
-static Mydouble myLIM = Mydouble(stdlim);
-static Mydouble myWeakLIM = Mydouble(stdlim * 2);
+static Mydouble myLIM = Mydouble(lim);
+static Mydouble myWeakLIM = Mydouble(weaklim);
 static Mydouble myp = Mydouble(p);
 static const int Hash1 = 2;
-static const int Hash2 = 1;
+static const int Hash2 = hash2;
 static const Mydouble inf = Mydouble(1000);
 static Mydouble myoutv = Mydouble(outv);
 
@@ -100,8 +100,8 @@ struct SetOfNodes {
 struct NewSketch {
     vector<Cache_Log> Log;
     void load_params() {
-        myLIM = Mydouble(stdlim);
-        myWeakLIM = Mydouble(stdlim * 2);
+        myLIM = Mydouble(lim);
+        myWeakLIM = Mydouble(weaklim);
         myp = Mydouble(p);
         myoutv = Mydouble(outv);
     }

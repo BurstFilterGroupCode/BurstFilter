@@ -4,7 +4,7 @@
     计算正确的burst，输出到 tmp/correct.txt 中
     
     usage: ./run_correct p(ratio) stdlim(burstlim) threshold
-    分别为比例系数，burst加权平均的阈值，包个数的要求（论文中定义为1，即没有要求）
+    分别为比例系数，burst加权平均的阈值，stage1到stage2的阈值，包个数的要求（论文中定义为1，即没有要求）
 
 */
 
@@ -17,7 +17,8 @@ using namespace std;
 
 /*
 struct Param {
-    double _stdlim;
+    double _lim;
+    double _weaklim;
     double _p;
     double _outv;
     int _threshold;
@@ -29,13 +30,13 @@ extern vector<Burstelem> Tc;
 extern vector<DS_Pack> DS;
 
 int main(int argc, char **argv) {
-    struct Param P = Param{0.005, 0.1, 0.5, 1, 0.05, 50000, 10000};
+    struct Param P = Param{0.005, 0.01, 0.1, 0.5, 1, 0.05, 50000, 10000};
     // struct Param P = Param{0.005, 0.1, 0.5, 50, 0.05, 50000, 10000};
     if(argc > 1) {
         sscanf(argv[1], "%lf", &P._p);
     }
     if(argc > 2) {
-        sscanf(argv[2], "%lf", &P._stdlim);
+        sscanf(argv[2], "%lf", &P._lim);
     }
     if(argc > 3) {
         sscanf(argv[3], "%d", &P._threshold);

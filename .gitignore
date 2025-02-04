@@ -2,4 +2,6 @@ build
 src/dummy
 result
 runtest/*.py
-# dataset/wechat_uniform_1.dat
+dataset/*
+!dataset/README.md
+netsketch_test

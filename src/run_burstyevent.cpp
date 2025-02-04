@@ -11,6 +11,7 @@
 #include "sketch/newsketch/param.h"
 #include "read_correct.h"
 #include "util/read_dataset.h"
+#include "util/time.h"
 
 #include <iostream>
 #include <cstdio>
@@ -25,16 +26,6 @@ double _tm[10001000];
 
 extern vector<Burstelem> Tc;
 extern vector<DS_Pack> DS;
-
-#include <sys/time.h>
-
-long long time_ms() {
-    struct timeval tv;
-    long long mstime;
-    gettimeofday(&tv, NULL);
-    mstime = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-    return mstime;
-}
 
 int main(int argc, char **argv)
 {
