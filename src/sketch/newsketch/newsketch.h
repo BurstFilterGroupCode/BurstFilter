@@ -26,8 +26,8 @@ struct Mydouble {
 static Mydouble myLIM = Mydouble(lim);
 static Mydouble myWeakLIM = Mydouble(weaklim);
 static Mydouble myp = Mydouble(p);
-static const int Hash1 = 2;
-static const int Hash2 = hash2;
+static const int Hash1 = hash1;
+static const int Hash2 = 1;
 static const Mydouble inf = Mydouble(1000);
 static Mydouble myoutv = Mydouble(outv);
 

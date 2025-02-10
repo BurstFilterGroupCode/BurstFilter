@@ -139,10 +139,11 @@ void init_dataset(int n){
         sum[pk.id] += pk.delay;
         cnt[pk.id]++;
     }
+    srand(42);
     for(auto &pk:cnt)
     {
         double avg = (double)sum[pk.first] / pk.second;
-        double new_avg = (double)rand() / RAND_MAX *  0.1 * lim + 0.95 * lim;
+        double new_avg = (double)rand() / RAND_MAX * 0.2 * lim + 0.9 * lim;
         f[pk.first] = new_avg / avg;
     }
     for(auto &pk:DS) {

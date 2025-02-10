@@ -4,8 +4,8 @@
     tests the result of the newsketch
     requires: ./tmp/correct.txt - the correct burst
 
-    usage: ./run_newsketch memsz(kb) mem_part1/memsz p(ratio) stdlim(burstlim) weaklim threshold hash2
-    example: ./run_newsketch 10 0.8 0.1 0.1 0.05 50 1 
+    usage: ./run_newsketch memsz(kb) mem_part1/memsz p(ratio) stdlim(burstlim) weaklim threshold hash1
+    example: ./run_newsketch 10 0.8 0.1 0.1 0.05 50 2
 
 */
 
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
         sscanf(argv[6], "%d", &P._threshold);
     }
     if(argc > 7) {
-        sscanf(argv[7], "%d", &P._hash2);
+        sscanf(argv[7], "%d", &P._hash1);
     }
     //printf("%d\n", P._threshold);
     load_param(P);
@@ -274,6 +274,13 @@ int main(int argc, char **argv) {
     fprintf(f1res, "%.10f\n", f1);
     fclose(f1res);
 
+    FILE *fprecision = fopen("tmp/newsketch_precision.res", "w");
+    fprintf(fprecision, "%.10f\n", preci);
+    fclose(fprecision);
+    
+    FILE *frecall = fopen("tmp/newsketch_recall.res", "w");
+    fprintf(frecall, "%.10f\n", recal);
+    fclose(frecall);
 
     FILE* fthroughput = fopen("tmp/newsketch_throughput.res", "w");
     fprintf(fthroughput, "%lld\n", edtime - sttime);

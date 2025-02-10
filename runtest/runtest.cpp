@@ -86,9 +86,9 @@ void print_listf(FILE* f,double *t, const char *pr, int len, const char *name) {
 // #define STRAWMAN
 // #define DEFINITION_PARAMS
 // #define ACCURACY_TEST
-// #define COMPARE_TEST
+#define COMPARE_TEST
 // #define CACHE_TEST
-#define PARAMS_TEST
+// #define PARAMS_TEST
 
 int main() {
 
@@ -226,14 +226,17 @@ int main() {
     // compare newsketch and topicsketch and other algorithms
     {
         run_and_wait("./run_correct 0.1 0.005 1");
-        const int mem[7] = {10, 20, 30, 50, 70, 100, 150};
-        double newsketch[7], topicsketch[7], burstsketch[7], burstyevent[7];
-        double thpnewsk[7], thptopsk[7], thpbstsk[7], thpbstev[7];
-        for(int i = 0; i < 7; i++) {
+        const int mem[12] = {1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 150};
+        double newsketch[12], topicsketch[12], burstsketch[12], burstyevent[12];
+        double thpnewsk[12], thptopsk[12], thpbstsk[12], thpbstev[12];
+        double precision[12], recall[12];
+        for(int i = 0; i < 12; i++) {
             char cmdline[1000];
-            sprintf(cmdline , "./run_newsketch %d 0.7 0.1 0.005 1", mem[i]);
+            sprintf(cmdline , "./run_newsketch %d 0.8 0.1 0.005 0.01 5", mem[i]);
             run_and_wait(cmdline);
             newsketch[i] = get_res("./tmp/newsketch.res");
+            precision[i] = get_res("./tmp/newsketch_precision.res");
+            recall[i] = get_res("./tmp/newsketch_recall.res");
             thpnewsk[i] = get_res("./tmp/newsketch_throughput.res") / 200000;
             /*sprintf(cmdline , "./run_topicsketch %d", mem[i]);
             run_and_wait(cmdline);
@@ -253,13 +256,15 @@ int main() {
             thpbstsk[i] = 1.0 / thpbstsk[i] / 1000;
             thpbstev[i] = 1.0 / thpbstev[i] / 1000;*/
         }
-        print_list((int*)mem, 7, "mem_compare");
-        print_list((double*)newsketch, "%.5f", 7, "newsketch_f1_compare");
+        print_list((int*)mem, 12, "mem_compare");
+        print_list((double*)newsketch, "%.5f", 12, "newsketch_f1_compare");
+        print_list((double*)precision, "%.5f", 12, "newsketch_precision_compare");
+        print_list((double*)recall, "%.5f", 12, "newsketch_recall_compare");
         /*print_list((double*)topicsketch, "%.5f", 7, "topicsketch_f1_compare");
         print_list((double*)burstsketch, "%.5f", 7, "burstsketch_f1_compare");
         print_list((double*)burstyevent, "%.5f", 7, "burstyevent_f1_compare");*/
 
-        print_list((double*)thpnewsk, "%.5f", 7, "newsketch_thp_compare");
+        print_list((double*)thpnewsk, "%.5f", 12, "newsketch_thp_compare");
         /*print_list((double*)thptopsk, "%.5f", 7, "topicsketch_thp_compare");
         print_list((double*)thpbstsk, "%.5f", 7, "burstsketch_thp_compare");
         print_list((double*)thpbstev, "%.5f", 7, "burstyevent_thp_compare");*/
@@ -314,7 +319,7 @@ int main() {
             char cmdline[1000];
             for(int j = 0; j < 13; j++)
             {
-                sprintf(cmdline , "./run_newsketch %d %.1f 0.1 0.005 0.01 1", mem[j], memk[i]);
+                sprintf(cmdline , "./run_newsketch %d %.1f 0.1 0.005 0.01 5", mem[j], memk[i]);
                 run_and_wait(cmdline);
                 f1sc[j] = get_res("./tmp/newsketch.res");
                 throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
@@ -340,7 +345,7 @@ int main() {
             fflush(f);
             for(int j = 0; j < 13; j++)
             {
-                sprintf(cmdline , "./run_newsketch %d 0.4 %.3f 0.005 0.01 1", mem[j], param[i]);
+                sprintf(cmdline , "./run_newsketch %d 0.8 %.3f 0.005 0.01 5", mem[j], param[i]);
                 run_and_wait(cmdline);
                 f1sc[j] = get_res("./tmp/newsketch.res");
                 throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
@@ -365,7 +370,7 @@ int main() {
             char cmdline[1000];
             for(int j = 0; j < 13; j++)
             {
-                sprintf(cmdline , "./run_newsketch %d 0.4 0.1 0.005 %.4f 1", mem[j], 0.005 * param[i]);
+                sprintf(cmdline , "./run_newsketch %d 0.8 0.1 0.005 %.4f 5", mem[j], 0.005 * param[i]);
                 run_and_wait(cmdline);
                 f1sc[j] = get_res("./tmp/newsketch.res");
                 throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
@@ -391,7 +396,7 @@ int main() {
             fflush(f);
             for(int j = 0; j < 13; j++)
             {
-                sprintf(cmdline , "./run_newsketch %d 0.4 0.1 %.4f %.4f 1", mem[j], param[i], param[i]* 2);
+                sprintf(cmdline , "./run_newsketch %d 0.8 0.1 %.4f %.4f 5", mem[j], param[i], param[i]* 2);
                 run_and_wait(cmdline);
                 f1sc[j] = get_res("./tmp/newsketch.res");
                 throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;
@@ -402,21 +407,21 @@ int main() {
             print_listf(f, (double*)throughput, "%.8f", 13, "throughput");
         }
     }
-    if(true)
+    if(false)
     {
         run_and_wait("./run_correct 0.1 0.005 1");
         const int param[10] = {1, 2, 3, 4, 5, 6, 7};
         const int mem[20] = {1, 2, 5, 7, 10, 20, 30, 50, 70, 100, 200, 500, 1000};
         double f1sc[100];
         double throughput[100];
-        FILE* f = fopen("tmp/param_test_hash2.res", "w");
+        FILE* f = fopen("tmp/param_test_hash1.res", "w");
         for(int i = 0; i < 7; i++) {
-            fprintf(f, "hash2 = %d\n", param[i]);
+            fprintf(f, "hash1 = %d\n", param[i]);
             fflush(f);
             char cmdline[1000];
             for(int j = 0; j < 13; j++)
             {
-                sprintf(cmdline , "./run_newsketch %d 0.4 0.1 0.005 0.01 %d", mem[j], param[i]);
+                sprintf(cmdline , "./run_newsketch %d 0.8 0.1 0.005 0.01 %d", mem[j], param[i]);
                 run_and_wait(cmdline);
                 f1sc[j] = get_res("./tmp/newsketch.res");
                 throughput[j] = get_res("./tmp/newsketch_throughput.res") / 10000000;

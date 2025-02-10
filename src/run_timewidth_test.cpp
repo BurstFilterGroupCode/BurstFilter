@@ -261,7 +261,7 @@ void test_res (double rt) {
     Strawman_test::init (-1);
     Strawman_test::runtest (1);
     // for (int sz = 100000000; sz <= 100000000; sz <<= 1) {
-    for (int sz = 256; sz <= 32768; sz <<= 1) {
+    for (int sz = 256; sz <= (1 << 22); sz <<= 1) {
         int _N1 = sz * rt, _N2 = sz * (1 - rt);
         int N1 = _N1 / sizeof (double);
         int N2 = _N2 / ((sizeof (int) + sizeof (double)) * Sketch_test::S2);
@@ -403,9 +403,9 @@ int main() {
     cout<<"Initiation Completed\n";
     cout << DS [0].id << ' ' << DS [0].tm << ' ' << DS [0].delay << endl;
     cout << DS [DS.size () - 1].id << ' ' << DS [DS.size () - 1].tm << ' ' << DS [DS.size () - 1].delay << endl;
-    // test_res (0.5);
+    test_res (0.5);
     // test_strm ();
-    test_wtf();
+    // test_wtf();
     // test_burstsketch();
     // Sketch_test::runtest();
     // Strawman_test::runtest();

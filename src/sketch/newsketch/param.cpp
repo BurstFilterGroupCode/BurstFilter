@@ -5,7 +5,7 @@ double p = 0.1;
 double outv = 0.5;
 int threshold = 1;
 double chklim = 0.05;
-int hash2 = 1;
+int hash1 = 2;
 
 void load_param(struct Param x) {
     chklim = x._chklim;
@@ -14,5 +14,5 @@ void load_param(struct Param x) {
     p = x._p;
     lim = x._lim;
     weaklim = x._weaklim;
-    hash2 = x._hash2;
+    hash1 = x._hash1;
 }

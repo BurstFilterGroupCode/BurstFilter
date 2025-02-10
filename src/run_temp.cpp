@@ -364,6 +364,8 @@ void test_burstsketch()
             }
         }
     }
+    fclose(file);
+    return;
 }
 
 // double compare(const vector<pair<int, double> > &a, const vector<pair<int, double> > &b) {

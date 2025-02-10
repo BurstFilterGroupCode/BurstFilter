@@ -15,7 +15,7 @@ extern double p;
 extern double outv;
 extern int threshold;
 extern double chklim;
-extern int hash2;
+extern int hash1;
 
 struct Param {
     double _lim; // Burst阈值（时间带权平均的阈值）
@@ -26,7 +26,7 @@ struct Param {
     double _chklim; // check要求的时间差（benchmark相关）
     int Size_stage1;// stage1 大小
     int Size_stage2;// stage2 大小
-    int _hash2;     // stage2 hash函数个数
+    int _hash1;     // stage1 hash函数个数
 };
 //需要调的参
 
