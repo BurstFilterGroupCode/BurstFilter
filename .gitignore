@@ -1,8 +1,0 @@
-build
-src/dummy
-result
-runtest/*.py
-dataset/*
-!dataset/README.md
-!dataset/jitter_dataset
-netsketch_test
